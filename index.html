@@ -184,7 +184,19 @@
     position: relative;
     overflow: hidden;
     isolation: isolate;
+    /* Works for both <button> and <a> */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    text-align: center;
   }
+  .btn-primary .arrow {
+    display: inline-block;
+    transition: transform 200ms ease;
+  }
+  .btn-primary:hover .arrow { transform: translateX(3px); }
 
   .btn-primary::before {
     content: '';
@@ -503,6 +515,10 @@
         <button id="copyPwd" class="btn-icon" type="button" aria-label="Copy password">Copy</button>
       </div>
 
+      <a id="exercisesBtn" class="btn-primary hidden" target="_blank" rel="noopener noreferrer">
+        <span id="exercisesLabel">Open exercises</span><span class="arrow" aria-hidden="true">↗</span>
+      </a>
+
       <button id="copyAll" class="btn-secondary" type="button">Copy all details</button>
     </section>
 
@@ -522,9 +538,11 @@
        ========================================================= */
     const CONFIG = {
       APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzCYbrpUckqzRGMM0Q0lJfpu76EUzxpNOdLko-_S3Fi2jZwsp0GFW7Q4-IPBLmImD1b/exec',
-      TITLE:    'ATF Lab',
-      EYEBROW:  'WORKSHOP',
-      USERNAME: 'admin'
+      TITLE:           'ATF Lab',
+      EYEBROW:         'WORKSHOP',
+      USERNAME:        'admin',
+      EXERCISES_URL:   'https://bit.ly/atf-workshop',
+      EXERCISES_LABEL: 'Open exercises'   // Button text on the result screen
     };
 
     /* =========================================================
@@ -552,6 +570,8 @@
       copyUser:       document.getElementById('copyUser'),
       copyPwd:        document.getElementById('copyPwd'),
       copyAll:        document.getElementById('copyAll'),
+      exercisesBtn:   document.getElementById('exercisesBtn'),
+      exercisesLabel: document.getElementById('exercisesLabel'),
       toast:          document.getElementById('toast')
     };
 
@@ -567,6 +587,12 @@
       els.username.textContent = CONFIG.USERNAME;
       document.title = CONFIG.TITLE;
 
+      if (CONFIG.EXERCISES_URL) {
+        els.exercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
+        els.exercisesLabel.textContent = CONFIG.EXERCISES_LABEL || 'Open exercises';
+        els.exercisesBtn.classList.remove('hidden');
+      }
+
       els.claimBtn.addEventListener('click', startClaim);
       els.retryBtn.addEventListener('click', startClaim);
       els.copyUser.addEventListener('click', () => copyText(CONFIG.USERNAME, els.copyUser));
@@ -575,11 +601,14 @@
       });
       els.copyAll.addEventListener('click', () => {
         if (!claimResult) return;
-        const block =
+        let block =
           'Instance: ' + claimResult.instanceNumber + '\n' +
           'URL: '      + claimResult.instanceUrl    + '\n' +
           'Username: ' + (claimResult.username || CONFIG.USERNAME) + '\n' +
           'Password: ' + claimResult.password;
+        if (CONFIG.EXERCISES_URL) {
+          block += '\nExercises: ' + CONFIG.EXERCISES_URL;
+        }
         copyText(block, els.copyAll, 'Copied all details');
       });
     });
