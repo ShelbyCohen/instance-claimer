@@ -548,9 +548,9 @@
     /* =========================================================
        Constants & state
        ========================================================= */
-    const REQUEST_TIMEOUT_MS = 15000;
-    const MAX_BUSY_RETRIES   = 3;
-    const BUSY_RETRY_DELAY   = 1200;
+    const REQUEST_TIMEOUT_MS = 75000;   // bigger than backend lock timeout (60s) + buffer
+    const MAX_BUSY_RETRIES   = 5;
+    const BUSY_RETRY_DELAY   = 1500;
 
     const els = {
       title:          document.getElementById('title'),
@@ -656,7 +656,7 @@
         if (err && err.name === 'AbortError') {
           showError('Request timed out. Check your wifi connection and try again.');
         } else if (err && err.message === 'BUSY_EXHAUSTED') {
-          showError('Server is busy right now. Please try again in a moment.');
+          showError('Lots of people claiming right now. Tap Try Again in a moment.');
         } else {
           showError('Check your wifi connection and try again.');
         }
