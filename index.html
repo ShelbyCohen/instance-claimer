@@ -713,8 +713,8 @@
     /* =========================================================
        Constants & state
        ========================================================= */
-    const REQUEST_TIMEOUT_MS = 20000;   // > backend lock timeout (15s)
-    const MAX_BUSY_RETRIES   = 3;
+    const REQUEST_TIMEOUT_MS = 30000;   // > backend lock timeout (20s) + redirect overhead margin
+    const MAX_BUSY_RETRIES   = 5;
     const BUSY_RETRY_DELAY   = 1500;
 
     // Cycling status messages while loading — gives the wait some texture
