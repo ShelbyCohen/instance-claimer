@@ -235,6 +235,45 @@
     -webkit-tap-highlight-color: transparent;
     margin-top: 4px;
   }
+
+  /* Outline CTA — for "secondary primary" actions (e.g. open lab exercises) */
+  .btn-outline {
+    appearance: none;
+    border: 1.5px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    padding: 16px 22px;
+    cursor: pointer;
+    transition: background 160ms ease, transform 100ms ease;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    margin-top: 8px;
+  }
+  .btn-outline:hover { background: var(--accent-soft); }
+  .btn-outline:active { transform: scale(0.99); }
+  .btn-outline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-outline .arrow {
+    display: inline-block;
+    transition: transform 200ms ease;
+  }
+  .btn-outline:hover .arrow { transform: translateX(3px); }
+
+  /* Loading-state tip block */
+  .loading-tip {
+    color: var(--muted);
+    font-size: 0.8125rem;
+    margin: 14px 0 4px;
+  }
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: var(--card-border-bright);
@@ -485,6 +524,13 @@
         <span></span><span></span><span></span>
       </div>
       <p class="loading-msg" id="loadingMsg">Spinning up your instance…</p>
+
+      <div id="loadingTip" class="hidden">
+        <p class="loading-tip">While you wait, take a look at today's lab:</p>
+        <a id="loadingExercisesBtn" class="btn-outline" target="_blank" rel="noopener noreferrer">
+          <span>View lab exercises</span><span class="arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
     </section>
 
     <section id="state-result" class="state hidden" aria-live="polite">
@@ -499,11 +545,6 @@
       <p class="instance-number" id="instanceNumber">000</p>
 
       <div class="field">
-        <span class="field-label">URL</span>
-        <a id="instanceUrl" class="field-value link" target="_blank" rel="noopener noreferrer">—</a>
-      </div>
-
-      <div class="field">
         <span class="field-label">User</span>
         <span class="field-value mono" id="username">admin</span>
         <button id="copyUser" class="btn-icon" type="button" aria-label="Copy username">Copy</button>
@@ -515,8 +556,12 @@
         <button id="copyPwd" class="btn-icon" type="button" aria-label="Copy password">Copy</button>
       </div>
 
-      <a id="exercisesBtn" class="btn-primary hidden" target="_blank" rel="noopener noreferrer">
-        <span id="exercisesLabel">Open exercises</span><span class="arrow" aria-hidden="true">↗</span>
+      <a id="instanceBtn" class="btn-primary" target="_blank" rel="noopener noreferrer">
+        <span>Open my instance</span><span class="arrow" aria-hidden="true">↗</span>
+      </a>
+
+      <a id="exercisesBtn" class="btn-outline hidden" target="_blank" rel="noopener noreferrer">
+        <span id="exercisesLabel">Open lab exercises</span><span class="arrow" aria-hidden="true">↗</span>
       </a>
 
       <button id="copyAll" class="btn-secondary" type="button">Copy all details</button>
@@ -542,15 +587,25 @@
       EYEBROW:         'WORKSHOP',
       USERNAME:        'admin',
       EXERCISES_URL:   'https://bit.ly/atf-workshop',
-      EXERCISES_LABEL: 'Open exercises'   // Button text on the result screen
+      EXERCISES_LABEL: 'Open lab exercises'   // Button text on the result screen
     };
 
     /* =========================================================
        Constants & state
        ========================================================= */
-    const REQUEST_TIMEOUT_MS = 75000;   // bigger than backend lock timeout (60s) + buffer
-    const MAX_BUSY_RETRIES   = 5;
+    const REQUEST_TIMEOUT_MS = 20000;   // > backend lock timeout (15s)
+    const MAX_BUSY_RETRIES   = 3;
     const BUSY_RETRY_DELAY   = 1500;
+
+    // Cycling status messages while loading — gives the wait some texture
+    const LOADING_MESSAGES = [
+      'Spinning up your instance…',
+      'Reserving credentials…',
+      'Configuring access…',
+      'Almost ready…',
+      'Finalizing setup…'
+    ];
+    const LOADING_MESSAGE_INTERVAL = 2800;
 
     const els = {
       title:          document.getElementById('title'),
@@ -561,22 +616,25 @@
       error:          document.getElementById('state-error'),
       claimBtn:       document.getElementById('claimBtn'),
       retryBtn:       document.getElementById('retryBtn'),
-      loadingMsg:     document.getElementById('loadingMsg'),
-      errorMsg:       document.getElementById('errorMsg'),
-      instanceNumber: document.getElementById('instanceNumber'),
-      instanceUrl:    document.getElementById('instanceUrl'),
-      username:       document.getElementById('username'),
-      password:       document.getElementById('password'),
-      copyUser:       document.getElementById('copyUser'),
-      copyPwd:        document.getElementById('copyPwd'),
-      copyAll:        document.getElementById('copyAll'),
-      exercisesBtn:   document.getElementById('exercisesBtn'),
-      exercisesLabel: document.getElementById('exercisesLabel'),
-      toast:          document.getElementById('toast')
+      loadingMsg:        document.getElementById('loadingMsg'),
+      loadingTip:        document.getElementById('loadingTip'),
+      loadingExercisesBtn: document.getElementById('loadingExercisesBtn'),
+      errorMsg:          document.getElementById('errorMsg'),
+      instanceNumber:    document.getElementById('instanceNumber'),
+      instanceBtn:       document.getElementById('instanceBtn'),
+      username:          document.getElementById('username'),
+      password:          document.getElementById('password'),
+      copyUser:          document.getElementById('copyUser'),
+      copyPwd:           document.getElementById('copyPwd'),
+      copyAll:           document.getElementById('copyAll'),
+      exercisesBtn:      document.getElementById('exercisesBtn'),
+      exercisesLabel:    document.getElementById('exercisesLabel'),
+      toast:             document.getElementById('toast')
     };
 
-    let claimResult = null;
-    let toastTimer  = null;
+    let claimResult       = null;
+    let toastTimer        = null;
+    let loadingMsgTimer   = null;
 
     /* =========================================================
        Init
@@ -588,10 +646,18 @@
       document.title = CONFIG.TITLE;
 
       if (CONFIG.EXERCISES_URL) {
+        const label = CONFIG.EXERCISES_LABEL || 'Open lab exercises';
         els.exercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
-        els.exercisesLabel.textContent = CONFIG.EXERCISES_LABEL || 'Open exercises';
+        els.exercisesLabel.textContent = label;
         els.exercisesBtn.classList.remove('hidden');
+
+        els.loadingExercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
+        els.loadingTip.classList.remove('hidden');
       }
+
+      // Pre-warm the Apps Script runtime so the first real claim is fast.
+      // Best-effort — silently ignore network failures.
+      preWarm();
 
       els.claimBtn.addEventListener('click', startClaim);
       els.retryBtn.addEventListener('click', startClaim);
@@ -625,6 +691,38 @@
         error:   els.error
       };
       map[name].classList.remove('hidden');
+
+      if (name === 'loading') startLoadingMessages();
+      else                    stopLoadingMessages();
+    }
+
+    function startLoadingMessages() {
+      stopLoadingMessages();
+      let idx = 0;
+      els.loadingMsg.textContent = LOADING_MESSAGES[0];
+      loadingMsgTimer = setInterval(() => {
+        idx = (idx + 1) % LOADING_MESSAGES.length;
+        els.loadingMsg.textContent = LOADING_MESSAGES[idx];
+      }, LOADING_MESSAGE_INTERVAL);
+    }
+
+    function stopLoadingMessages() {
+      if (loadingMsgTimer) {
+        clearInterval(loadingMsgTimer);
+        loadingMsgTimer = null;
+      }
+    }
+
+    /* =========================================================
+       Pre-warm — wakes up the Apps Script runtime before the
+       user taps Claim, so the first real request is faster.
+       ========================================================= */
+    function preWarm() {
+      if (!CONFIG.APPS_SCRIPT_URL) return;
+      const sep = CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?';
+      const url = CONFIG.APPS_SCRIPT_URL + sep + 'ping=1';
+      fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' })
+        .catch(() => {});
     }
 
     /* =========================================================
@@ -637,7 +735,6 @@
       }
 
       els.claimBtn.disabled = true;
-      els.loadingMsg.textContent = 'Spinning up your instance…';
       showState('loading');
 
       try {
@@ -708,9 +805,7 @@
        ========================================================= */
     function renderResult(data) {
       els.instanceNumber.textContent = data.instanceNumber || '—';
-      const url = data.instanceUrl || '#';
-      els.instanceUrl.textContent = url;
-      els.instanceUrl.setAttribute('href', url);
+      els.instanceBtn.setAttribute('href', data.instanceUrl || '#');
       els.username.textContent = data.username || CONFIG.USERNAME;
       els.password.textContent = data.password || '—';
     }
