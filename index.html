@@ -194,6 +194,8 @@
   }
   .btn-primary .arrow {
     display: inline-block;
+    font-size: 1.25rem;
+    font-weight: 700;
     transition: transform 200ms ease;
   }
   .btn-primary:hover .arrow { transform: translateX(3px); }
@@ -264,15 +266,110 @@
   .btn-outline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .btn-outline .arrow {
     display: inline-block;
+    font-size: 1.25rem;
+    font-weight: 700;
     transition: transform 200ms ease;
   }
   .btn-outline:hover .arrow { transform: translateX(3px); }
 
-  /* Loading-state tip block */
-  .loading-tip {
-    color: var(--muted);
+  /* Lab preview card (shown on the result screen, tappable to open the guide) */
+  .preview-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    margin-top: 8px;
+    border-radius: var(--radius-sm);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .preview-card-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .preview-card {
+    background: rgba(98, 216, 78, 0.05);
+    border: 1px solid rgba(98, 216, 78, 0.18);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    text-align: left;
+    transition: background 200ms ease, border-color 200ms ease;
+  }
+  .preview-card-link:hover .preview-card {
+    background: rgba(98, 216, 78, 0.10);
+    border-color: rgba(98, 216, 78, 0.40);
+  }
+  .preview-card-link:hover .preview-arrow { transform: translateX(3px); }
+
+  .preview-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 14px;
+  }
+
+  .preview-title {
+    color: var(--text);
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0;
+    flex: 1;
+  }
+
+  .preview-arrow {
+    color: var(--accent);
+    font-size: 1.625rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 200ms ease;
+    display: inline-block;
+  }
+
+  .preview-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .preview-steps li {
+    color: var(--text-soft);
     font-size: 0.8125rem;
-    margin: 14px 0 4px;
+    line-height: 1.45;
+    padding-left: 28px;
+    position: relative;
+    counter-increment: step;
+  }
+
+  .preview-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(98, 216, 78, 0.18);
+    color: var(--accent);
+    font-size: 0.625rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Used for the lazy-revealed preview on the loading state */
+  .fade-in-up {
+    animation: fadeInUp 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -370,26 +467,20 @@
   }
   @keyframes checkDraw { to { stroke-dashoffset: 0; } }
 
-  .instance-label {
+  /* Instance number inline on the primary button */
+  .instance-num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+  }
+
+  /* Subtle confirmation tag below the checkmark */
+  .claimed-tag {
     color: var(--muted);
     font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.22em;
     font-weight: 700;
     margin: 6px 0 0;
-  }
-
-  .instance-number {
-    margin: 0 0 10px;
-    font-size: 3.5rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    font-variant-numeric: tabular-nums;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    line-height: 1.05;
   }
 
   .field {
@@ -525,12 +616,15 @@
       </div>
       <p class="loading-msg" id="loadingMsg">Spinning up your instance…</p>
 
-      <div id="loadingTip" class="hidden">
-        <p class="loading-tip">While you wait, take a look at today's lab:</p>
-        <a id="loadingExercisesBtn" class="btn-outline" target="_blank" rel="noopener noreferrer">
-          <span>View lab exercises</span><span class="arrow" aria-hidden="true">↗</span>
-        </a>
-      </div>
+      <a id="loadingPreviewLink" class="preview-card-link hidden" target="_blank" rel="noopener noreferrer">
+        <div class="preview-card">
+          <div class="preview-title-row">
+            <h3 id="loadingPreviewTitle" class="preview-title">Today's lab</h3>
+            <span class="preview-arrow" aria-hidden="true">↗</span>
+          </div>
+          <ul id="loadingPreviewSteps" class="preview-steps"></ul>
+        </div>
+      </a>
     </section>
 
     <section id="state-result" class="state hidden" aria-live="polite">
@@ -541,8 +635,12 @@
           </svg>
         </div>
       </div>
-      <p class="instance-label">Your instance</p>
-      <p class="instance-number" id="instanceNumber">000</p>
+      <p class="claimed-tag">You're in</p>
+
+      <a id="instanceBtn" class="btn-primary" target="_blank" rel="noopener noreferrer">
+        <span>Open instance <span id="instanceNumber" class="instance-num">0</span></span>
+        <span class="arrow" aria-hidden="true">↗</span>
+      </a>
 
       <div class="field">
         <span class="field-label">User</span>
@@ -556,15 +654,19 @@
         <button id="copyPwd" class="btn-icon" type="button" aria-label="Copy password">Copy</button>
       </div>
 
-      <a id="instanceBtn" class="btn-primary" target="_blank" rel="noopener noreferrer">
-        <span>Open my instance</span><span class="arrow" aria-hidden="true">↗</span>
+      <a id="exercisesPreviewLink" class="preview-card-link hidden" target="_blank" rel="noopener noreferrer">
+        <div class="preview-card">
+          <div class="preview-title-row">
+            <h3 id="previewTitle" class="preview-title">Today's lab</h3>
+            <span class="preview-arrow" aria-hidden="true">↗</span>
+          </div>
+          <ul id="previewSteps" class="preview-steps"></ul>
+        </div>
       </a>
 
       <a id="exercisesBtn" class="btn-outline hidden" target="_blank" rel="noopener noreferrer">
         <span id="exercisesLabel">Open lab exercises</span><span class="arrow" aria-hidden="true">↗</span>
       </a>
-
-      <button id="copyAll" class="btn-secondary" type="button">Copy all details</button>
     </section>
 
     <section id="state-error" class="state hidden" aria-live="assertive">
@@ -587,7 +689,25 @@
       EYEBROW:         'WORKSHOP',
       USERNAME:        'admin',
       EXERCISES_URL:   'https://bit.ly/atf-workshop',
-      EXERCISES_LABEL: 'Open lab exercises'   // Button text on the result screen
+      EXERCISES_LABEL: 'Open lab exercises',  // Used only when LAB_PREVIEW is null
+
+      // Shows a tappable preview of today's lab. The entire card links to
+      // EXERCISES_URL. Set to `null` to fall back to a plain "Open lab
+      // exercises" button instead.
+      LAB_PREVIEW: {
+        TITLE: 'Today\'s lab',
+        STEPS: [
+          'Reusable Tests',
+          'Configurable Workspace Testing',
+          'Code Coverage',
+          'Test Agent: Conversational Authoring',
+          'Test Agent: Autonomous Flow'
+        ]
+      },
+
+      // After this many ms in the loading state, the lab preview fades in
+      // so a slow claim has something to read. Fast claims never see it.
+      LOADING_PREVIEW_DELAY_MS: 8000
     };
 
     /* =========================================================
@@ -599,13 +719,13 @@
 
     // Cycling status messages while loading — gives the wait some texture
     const LOADING_MESSAGES = [
-      'Spinning up your instance…',
-      'Reserving credentials…',
-      'Configuring access…',
-      'Almost ready…',
-      'Finalizing setup…'
+      'Locating an available sandbox…',
+      'Reserving your instance…',
+      'Configuring admin credentials…',
+      'Connecting to ServiceNow…',
+      'Almost ready…'
     ];
-    const LOADING_MESSAGE_INTERVAL = 2800;
+    const LOADING_MESSAGE_INTERVAL = 2400;
 
     const els = {
       title:          document.getElementById('title'),
@@ -617,8 +737,6 @@
       claimBtn:       document.getElementById('claimBtn'),
       retryBtn:       document.getElementById('retryBtn'),
       loadingMsg:        document.getElementById('loadingMsg'),
-      loadingTip:        document.getElementById('loadingTip'),
-      loadingExercisesBtn: document.getElementById('loadingExercisesBtn'),
       errorMsg:          document.getElementById('errorMsg'),
       instanceNumber:    document.getElementById('instanceNumber'),
       instanceBtn:       document.getElementById('instanceBtn'),
@@ -626,15 +744,21 @@
       password:          document.getElementById('password'),
       copyUser:          document.getElementById('copyUser'),
       copyPwd:           document.getElementById('copyPwd'),
-      copyAll:           document.getElementById('copyAll'),
+      exercisesPreviewLink: document.getElementById('exercisesPreviewLink'),
+      previewTitle:      document.getElementById('previewTitle'),
+      previewSteps:      document.getElementById('previewSteps'),
+      loadingPreviewLink: document.getElementById('loadingPreviewLink'),
+      loadingPreviewTitle: document.getElementById('loadingPreviewTitle'),
+      loadingPreviewSteps: document.getElementById('loadingPreviewSteps'),
       exercisesBtn:      document.getElementById('exercisesBtn'),
       exercisesLabel:    document.getElementById('exercisesLabel'),
       toast:             document.getElementById('toast')
     };
 
-    let claimResult       = null;
-    let toastTimer        = null;
-    let loadingMsgTimer   = null;
+    let claimResult         = null;
+    let toastTimer          = null;
+    let loadingMsgTimer     = null;
+    let loadingPreviewTimer = null;
 
     /* =========================================================
        Init
@@ -645,14 +769,36 @@
       els.username.textContent = CONFIG.USERNAME;
       document.title = CONFIG.TITLE;
 
-      if (CONFIG.EXERCISES_URL) {
-        const label = CONFIG.EXERCISES_LABEL || 'Open lab exercises';
-        els.exercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
-        els.exercisesLabel.textContent = label;
-        els.exercisesBtn.classList.remove('hidden');
+      // Result + loading-state previews share the same content. Render once,
+      // populate both DOM copies. Visibility is handled per-state:
+      //   - result: shown immediately when claim succeeds
+      //   - loading: hidden by default, fades in after LOADING_PREVIEW_DELAY_MS
+      if (CONFIG.EXERCISES_URL && CONFIG.LAB_PREVIEW) {
+        const p = CONFIG.LAB_PREVIEW;
+        const title = p.TITLE || 'Today\'s lab';
+        els.previewTitle.textContent        = title;
+        els.loadingPreviewTitle.textContent = title;
 
-        els.loadingExercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
-        els.loadingTip.classList.remove('hidden');
+        renderPreviewSteps(els.previewSteps,        p.STEPS);
+        renderPreviewSteps(els.loadingPreviewSteps, p.STEPS);
+
+        els.exercisesPreviewLink.setAttribute('href',  CONFIG.EXERCISES_URL);
+        els.loadingPreviewLink.setAttribute('href',    CONFIG.EXERCISES_URL);
+        els.exercisesPreviewLink.classList.remove('hidden');
+      } else if (CONFIG.EXERCISES_URL) {
+        els.exercisesBtn.setAttribute('href', CONFIG.EXERCISES_URL);
+        els.exercisesLabel.textContent = CONFIG.EXERCISES_LABEL || 'Open lab exercises';
+        els.exercisesBtn.classList.remove('hidden');
+      }
+
+      function renderPreviewSteps(ul, steps) {
+        if (!ul || !Array.isArray(steps)) return;
+        ul.innerHTML = '';
+        for (const step of steps) {
+          const li = document.createElement('li');
+          li.textContent = step;
+          ul.appendChild(li);
+        }
       }
 
       // Pre-warm the Apps Script runtime so the first real claim is fast.
@@ -665,17 +811,18 @@
       els.copyPwd.addEventListener('click', () => {
         if (claimResult) copyText(claimResult.password, els.copyPwd);
       });
-      els.copyAll.addEventListener('click', () => {
-        if (!claimResult) return;
-        let block =
-          'Instance: ' + claimResult.instanceNumber + '\n' +
-          'URL: '      + claimResult.instanceUrl    + '\n' +
-          'Username: ' + (claimResult.username || CONFIG.USERNAME) + '\n' +
-          'Password: ' + claimResult.password;
-        if (CONFIG.EXERCISES_URL) {
-          block += '\nExercises: ' + CONFIG.EXERCISES_URL;
+
+      // Auto-copy password to clipboard when the user taps "Open instance",
+      // so they can paste it straight into ServiceNow's login form. The
+      // anchor's default behaviour still opens the instance in a new tab.
+      els.instanceBtn.addEventListener('click', () => {
+        if (!claimResult || !claimResult.password) return;
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(claimResult.password).catch(() => {});
+        } else {
+          try { legacyCopy(claimResult.password); } catch (_) {}
         }
-        copyText(block, els.copyAll, 'Copied all details');
+        showToast('Password copied — type admin and paste');
       });
     });
 
@@ -704,12 +851,31 @@
         idx = (idx + 1) % LOADING_MESSAGES.length;
         els.loadingMsg.textContent = LOADING_MESSAGES[idx];
       }, LOADING_MESSAGE_INTERVAL);
+
+      // Lazy-reveal the lab preview only if the wait drags on. Fast claims
+      // never see this; slow ones get something to read after ~8 seconds.
+      const delay = CONFIG.LOADING_PREVIEW_DELAY_MS || 8000;
+      if (els.loadingPreviewLink && CONFIG.EXERCISES_URL && CONFIG.LAB_PREVIEW) {
+        loadingPreviewTimer = setTimeout(() => {
+          els.loadingPreviewLink.classList.remove('hidden');
+          els.loadingPreviewLink.classList.add('fade-in-up');
+        }, delay);
+      }
     }
 
     function stopLoadingMessages() {
       if (loadingMsgTimer) {
         clearInterval(loadingMsgTimer);
         loadingMsgTimer = null;
+      }
+      if (loadingPreviewTimer) {
+        clearTimeout(loadingPreviewTimer);
+        loadingPreviewTimer = null;
+      }
+      // Reset the loading preview so it's hidden again next time
+      if (els.loadingPreviewLink) {
+        els.loadingPreviewLink.classList.add('hidden');
+        els.loadingPreviewLink.classList.remove('fade-in-up');
       }
     }
 
@@ -804,10 +970,16 @@
        Render helpers
        ========================================================= */
     function renderResult(data) {
-      els.instanceNumber.textContent = data.instanceNumber || '—';
+      els.instanceNumber.textContent = formatInstanceNumber(data.instanceNumber);
       els.instanceBtn.setAttribute('href', data.instanceUrl || '#');
       els.username.textContent = data.username || CONFIG.USERNAME;
       els.password.textContent = data.password || '—';
+    }
+
+    // "001" → "1", "042" → "42", "000" → "0", "BASE" → "BASE"
+    function formatInstanceNumber(raw) {
+      const stripped = String(raw == null ? '' : raw).replace(/^0+/, '');
+      return stripped || '0';
     }
 
     function showError(msg) {
