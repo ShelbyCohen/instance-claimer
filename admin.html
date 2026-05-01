@@ -161,6 +161,15 @@
   }
   .btn:active { transform: scale(0.99); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.btn-loading {
+    opacity: 0.85;
+    cursor: progress;
+    animation: btnPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes btnPulse {
+    0%, 100% { opacity: 0.7; }
+    50%      { opacity: 1; }
+  }
 
   .btn-primary  { background: var(--accent); color: #0a1428; }
   .btn-primary:hover { background: #4ab337; }
@@ -423,24 +432,43 @@
     });
 
     /* =========================================================
+       Button-state helper — always restores text/disabled state
+       ========================================================= */
+    async function withButton(btn, loadingText, fn) {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = loadingText;
+      btn.classList.add('btn-loading');
+      try {
+        return await fn();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+        btn.classList.remove('btn-loading');
+      }
+    }
+
+    /* =========================================================
        Actions
        ========================================================= */
     async function refresh() {
-      logLine('Fetching status…');
-      try {
-        const data = await call({ action: 'status' });
-        if (!data || !data.success) {
-          logLine('Status failed: ' + ((data && data.error) || 'unknown'), 'err');
-          return;
+      await withButton(els.refreshBtn, 'Refreshing…', async () => {
+        logLine('Fetching status…');
+        try {
+          const data = await call({ action: 'status' });
+          if (!data || !data.success) {
+            logLine('Status failed: ' + ((data && data.error) || 'unknown'), 'err');
+            return;
+          }
+          els.statTotal.textContent     = data.total;
+          els.statClaimed.textContent   = data.claimed;
+          els.statAvailable.textContent = data.available;
+          renderClaimedList(data.claimedList || []);
+          logLine(`Status: ${data.claimed}/${data.total} claimed (${data.available} free)`, 'ok');
+        } catch (err) {
+          logLine('Status request failed: ' + err.message, 'err');
         }
-        els.statTotal.textContent     = data.total;
-        els.statClaimed.textContent   = data.claimed;
-        els.statAvailable.textContent = data.available;
-        renderClaimedList(data.claimedList || []);
-        logLine(`Status: ${data.claimed}/${data.total} claimed (${data.available} free)`, 'ok');
-      } catch (err) {
-        logLine('Status request failed: ' + err.message, 'err');
-      }
+      });
     }
 
     async function clearOne() {
@@ -451,25 +479,21 @@
         return;
       }
       if (!confirm(`Free instance ${raw}? It will be available for re-claim.`)) return;
-      els.clearBtn.disabled = true;
-      logLine(`Freeing instance ${raw}…`);
-      try {
-        const data = await call({
-          action: 'clear',
-          instance: raw
-        });
-        if (data && data.success) {
-          logLine(`Instance ${data.instance} freed (row ${data.row})`, 'ok');
-          els.clearInput.value = '';
-          await refresh();
-        } else {
-          logLine('Clear failed: ' + ((data && data.error) || 'unknown'), 'err');
+      await withButton(els.clearBtn, 'Freeing…', async () => {
+        logLine(`Freeing instance ${raw}…`);
+        try {
+          const data = await call({ action: 'clear', instance: raw });
+          if (data && data.success) {
+            logLine(`Instance ${data.instance} freed (row ${data.row})`, 'ok');
+            els.clearInput.value = '';
+            await refresh();
+          } else {
+            logLine('Clear failed: ' + ((data && data.error) || 'unknown'), 'err');
+          }
+        } catch (err) {
+          logLine('Clear request failed: ' + err.message, 'err');
         }
-      } catch (err) {
-        logLine('Clear request failed: ' + err.message, 'err');
-      } finally {
-        els.clearBtn.disabled = false;
-      }
+      });
     }
 
     async function resetAll() {
@@ -485,23 +509,20 @@
         logLine('Reset cancelled', 'warn');
         return;
       }
-      els.resetBtn.disabled = true;
-      logLine('Resetting all claims…');
-      try {
-        const data = await call({
-          action: 'reset'
-        });
-        if (data && data.success) {
-          logLine(`All claims reset (${data.cleared} rows cleared)`, 'ok');
-          await refresh();
-        } else {
-          logLine('Reset failed: ' + ((data && data.error) || 'unknown'), 'err');
+      await withButton(els.resetBtn, 'Resetting…', async () => {
+        logLine('Resetting all claims…');
+        try {
+          const data = await call({ action: 'reset' });
+          if (data && data.success) {
+            logLine(`All claims reset (${data.cleared} rows cleared)`, 'ok');
+            await refresh();
+          } else {
+            logLine('Reset failed: ' + ((data && data.error) || 'unknown'), 'err');
+          }
+        } catch (err) {
+          logLine('Reset request failed: ' + err.message, 'err');
         }
-      } catch (err) {
-        logLine('Reset request failed: ' + err.message, 'err');
-      } finally {
-        els.resetBtn.disabled = false;
-      }
+      });
     }
 
     /* =========================================================

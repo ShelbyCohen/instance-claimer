@@ -485,6 +485,147 @@
     margin: -2px 0 4px;
   }
 
+  /* Modal — used for the "different instance" escape hatch */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(5, 9, 18, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: modalFadeIn 200ms ease both;
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .modal-card {
+    background: var(--card);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 28px 22px;
+    max-width: 380px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    animation: modalCardEnter 280ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+  @keyframes modalCardEnter {
+    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+  }
+  .modal-desc {
+    color: var(--text-soft);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+
+  /* Two-line action buttons used inside the rotate modal —
+     primary line states the action, sub line spells out the consequence */
+  .modal-action {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    margin-top: 10px;
+    transition: transform 100ms ease, box-shadow 200ms ease, background 160ms ease, border-color 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal-action:active { transform: scale(0.99); }
+  .modal-action:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .modal-action:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+  .modal-action-title {
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.005em;
+  }
+  .modal-action-sub {
+    font-weight: 500;
+    font-size: 0.8125rem;
+    opacity: 0.88;
+    line-height: 1.4;
+  }
+
+  .modal-action.primary {
+    background: linear-gradient(135deg, #62D84E 0%, #4ab337 100%);
+    color: #0a1428;
+    box-shadow: 0 8px 22px rgba(98, 216, 78, 0.32);
+  }
+  .modal-action.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(98, 216, 78, 0.42);
+  }
+
+  .modal-action.outline {
+    background: transparent;
+    color: var(--text);
+    border: 1.5px solid var(--accent);
+  }
+  .modal-action.outline:hover {
+    background: var(--accent-soft);
+  }
+  .modal-action.outline .modal-action-sub {
+    color: var(--text-soft);
+  }
+
+  /* Quiet text-link button — for "claim a different instance" escape hatch */
+  .link-quiet {
+    appearance: none;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 10px 8px;
+    text-decoration: underline;
+    text-decoration-color: rgba(122, 138, 163, 0.4);
+    text-underline-offset: 3px;
+    transition: color 160ms ease, text-decoration-color 160ms ease;
+    align-self: center;
+    margin-top: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .link-quiet:hover {
+    color: var(--text-soft);
+    text-decoration-color: var(--text-soft);
+  }
+  .link-quiet:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .link-quiet:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
   /* Subtle confirmation tag below the checkmark */
   .claimed-tag {
     color: var(--muted);
@@ -675,6 +816,8 @@
       <a id="exercisesBtn" class="btn-outline hidden" target="_blank" rel="noopener noreferrer">
         <span id="exercisesLabel">Open lab exercises</span><span class="arrow" aria-hidden="true">↗</span>
       </a>
+
+      <button id="rotateBtn" class="link-quiet" type="button">Need a different instance?</button>
     </section>
 
     <section id="state-error" class="state hidden" aria-live="assertive">
@@ -686,6 +829,25 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div id="rotateModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <h3 class="modal-title" id="modalTitle">Get a different instance</h3>
+      <p class="modal-desc">What do you want to do with instance <strong id="modalInstanceNum">—</strong>?</p>
+
+      <button id="modalReleaseBtn" class="modal-action primary" type="button">
+        <span class="modal-action-title">Switch to a new instance</span>
+        <span class="modal-action-sub">Releases this one for someone else. You'll claim a new one in this tab.</span>
+      </button>
+
+      <button id="modalKeepBtn" class="modal-action outline" type="button">
+        <span class="modal-action-title">Add a second instance</span>
+        <span class="modal-action-sub">Keeps this one yours. Opens a new tab so you can claim another in addition.</span>
+      </button>
+
+      <button id="modalCancelBtn" class="link-quiet" type="button">Cancel</button>
+    </div>
+  </div>
 
   <script>
     /* =========================================================
@@ -760,6 +922,12 @@
       password:          document.getElementById('password'),
       copyUser:          document.getElementById('copyUser'),
       copyPwd:           document.getElementById('copyPwd'),
+      rotateBtn:         document.getElementById('rotateBtn'),
+      rotateModal:       document.getElementById('rotateModal'),
+      modalInstanceNum:  document.getElementById('modalInstanceNum'),
+      modalReleaseBtn:   document.getElementById('modalReleaseBtn'),
+      modalKeepBtn:      document.getElementById('modalKeepBtn'),
+      modalCancelBtn:    document.getElementById('modalCancelBtn'),
       exercisesPreviewLink: document.getElementById('exercisesPreviewLink'),
       previewTitle:      document.getElementById('previewTitle'),
       previewSteps:      document.getElementById('previewSteps'),
@@ -824,7 +992,10 @@
 
       // If they already claimed earlier and the tab closed accidentally, restore
       // their instance from localStorage instead of forcing a re-claim.
-      const cached = loadClaim();
+      // Exception: ?fresh=1 in the URL means the user explicitly opened a new
+      // tab to claim an additional instance — skip the cached restore.
+      const wantsFresh = new URLSearchParams(window.location.search).has('fresh');
+      const cached    = wantsFresh ? null : loadClaim();
       if (cached) {
         claimResult = cached;
         renderResult(cached);
@@ -833,6 +1004,10 @@
         // Pre-warm the Apps Script runtime so the first real claim is fast.
         // Best-effort — silently ignore network failures.
         preWarm();
+      }
+      // Drop ?fresh=1 from the address bar so it doesn't surprise the user later.
+      if (wantsFresh) {
+        history.replaceState(null, '', window.location.pathname);
       }
 
       els.claimBtn.addEventListener('click', startClaim);
@@ -856,6 +1031,19 @@
         // Reveal a persistent hint near the button so users who switched tabs
         // and came back can still see what to do.
         els.copyHint.classList.remove('hidden');
+      });
+
+      els.rotateBtn.addEventListener('click', openRotateModal);
+      els.modalCancelBtn.addEventListener('click', closeRotateModal);
+      els.modalReleaseBtn.addEventListener('click', releaseAndReset);
+      els.modalKeepBtn.addEventListener('click', keepAndOpenNew);
+      els.rotateModal.addEventListener('click', (e) => {
+        if (e.target === els.rotateModal) closeRotateModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !els.rotateModal.classList.contains('hidden')) {
+          closeRotateModal();
+        }
       });
     });
 
@@ -910,6 +1098,71 @@
         els.loadingPreviewLink.classList.add('hidden');
         els.loadingPreviewLink.classList.remove('fade-in-up');
       }
+    }
+
+    /* =========================================================
+       Rotate — escape hatch for "I want a different instance".
+       Two paths:
+         - Release and claim new: frees the current row in the sheet, clears
+           local cache, drops back to claim state in this same tab.
+         - Keep and open new tab: leaves the current claim intact (both in
+           backend and in this tab's view), opens a fresh tab with ?fresh=1
+           so the user can claim a second instance in addition.
+       ========================================================= */
+    function openRotateModal() {
+      if (!claimResult) return;
+      els.modalInstanceNum.textContent = formatInstanceNumber(claimResult.instanceNumber);
+      els.modalReleaseBtn.disabled = false;
+      els.modalKeepBtn.disabled = false;
+      els.rotateModal.classList.remove('hidden');
+    }
+
+    function closeRotateModal() {
+      els.rotateModal.classList.add('hidden');
+    }
+
+    async function releaseAndReset() {
+      if (!claimResult) return closeRotateModal();
+      const num = formatInstanceNumber(claimResult.instanceNumber);
+
+      els.modalReleaseBtn.disabled = true;
+      els.modalKeepBtn.disabled    = true;
+
+      // Only swap the title span — leave the subtitle alone so the structure
+      // stays intact (otherwise textContent on the button wipes both spans).
+      const titleSpan = els.modalReleaseBtn.querySelector('.modal-action-title');
+      const oldTitle  = titleSpan ? titleSpan.textContent : '';
+      if (titleSpan) titleSpan.textContent = 'Releasing instance ' + num + '…';
+
+      // Best-effort backend release. If it fails, we still proceed locally —
+      // the leftover row gets reaped by the next admin reset before workshop end.
+      try {
+        const sep = CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?';
+        const url = CONFIG.APPS_SCRIPT_URL + sep
+          + 'action=clear&instance=' + encodeURIComponent(claimResult.instanceNumber);
+        await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+      } catch (_) { /* keep going */ }
+
+      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+      claimResult = null;
+      els.copyHint.classList.add('hidden');
+
+      if (titleSpan) titleSpan.textContent = oldTitle;
+      closeRotateModal();
+      showState('claim');
+    }
+
+    function keepAndOpenNew() {
+      // Build a same-origin URL with ?fresh=1 so the new tab skips the cached claim.
+      const url = window.location.pathname + '?fresh=1';
+      const win = window.open(url, '_blank');
+      if (!win) {
+        // Popup blocked — fall back to navigating this tab. User loses visibility
+        // of the current instance details, but the alternative is broken UX.
+        window.location.href = url;
+        return;
+      }
+      closeRotateModal();
     }
 
     /* =========================================================
