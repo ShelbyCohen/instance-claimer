@@ -697,7 +697,7 @@
       EYEBROW:         'LIVE NOW',
       SUBTITLE:        'Your ServiceNow instance for today\'s hands-on lab.',
       USERNAME:        'admin',
-      EXERCISES_URL:   'https://app.gitbook.com/o/wXJhB7H8YqI7f2lOgBuI/s/K1jQRre77qfVe8poJocy/',
+      EXERCISES_URL:   'https://servicenow-events-or-lab-guidebo.gitbook.io/knowledge-2026/ccl6425-k26/',
       EXERCISES_LABEL: 'Open lab exercises',  // Used only when LAB_PREVIEW is null
 
       // Shows a tappable preview of today's lab. The entire card links to
@@ -725,6 +725,11 @@
     const REQUEST_TIMEOUT_MS = 30000;   // > backend lock timeout (20s) + redirect overhead margin
     const MAX_BUSY_RETRIES   = 5;
     const BUSY_RETRY_DELAY   = 1500;
+
+    // Persist the successful claim so a tab close or refresh doesn't strand
+    // the user — they re-open the URL within 12 hours and see their instance again.
+    const STORAGE_KEY    = 'atf-lab-claim-v1';
+    const STORAGE_TTL_MS = 12 * 60 * 60 * 1000;
 
     // Cycling status messages while loading — gives the wait some texture
     const LOADING_MESSAGES = [
@@ -817,9 +822,18 @@
         }
       }
 
-      // Pre-warm the Apps Script runtime so the first real claim is fast.
-      // Best-effort — silently ignore network failures.
-      preWarm();
+      // If they already claimed earlier and the tab closed accidentally, restore
+      // their instance from localStorage instead of forcing a re-claim.
+      const cached = loadClaim();
+      if (cached) {
+        claimResult = cached;
+        renderResult(cached);
+        showState('result');
+      } else {
+        // Pre-warm the Apps Script runtime so the first real claim is fast.
+        // Best-effort — silently ignore network failures.
+        preWarm();
+      }
 
       els.claimBtn.addEventListener('click', startClaim);
       els.retryBtn.addEventListener('click', startClaim);
@@ -899,6 +913,34 @@
     }
 
     /* =========================================================
+       Claim persistence — survive accidental tab close / refresh
+       ========================================================= */
+    function saveClaim(data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          data: data,
+          claimedAt: Date.now()
+        }));
+      } catch (_) { /* localStorage disabled / full — ignore */ }
+    }
+
+    function loadClaim() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data || !parsed.claimedAt) return null;
+        if (Date.now() - parsed.claimedAt > STORAGE_TTL_MS) {
+          localStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
+        return parsed.data;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    /* =========================================================
        Pre-warm — wakes up the Apps Script runtime before the
        user taps Claim, so the first real request is faster.
        ========================================================= */
@@ -928,6 +970,7 @@
 
         if (data && data.success) {
           claimResult = data;
+          saveClaim(data);
           renderResult(data);
           showState('result');
         } else if (data && data.error) {

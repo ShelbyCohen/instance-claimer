@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050912">
+<meta name="robots" content="noindex,nofollow">
+<title>ATF Lab — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #050912;
+    --bg-1: #0a1428;
+    --card: rgba(18, 28, 50, 0.55);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text: #ffffff;
+    --text-soft: #cfd7e6;
+    --muted: #7a8aa3;
+    --accent: #62D84E;
+    --accent-2: #00C2D7;
+    --accent-soft: rgba(98, 216, 78, 0.12);
+    --warn: #f5b400;
+    --warn-soft: rgba(245, 180, 0, 0.12);
+    --danger: #ff5e5e;
+    --danger-soft: rgba(255, 94, 94, 0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at 30% 20%, rgba(98, 216, 78, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(0, 194, 215, 0.08) 0%, transparent 50%),
+                var(--bg-1);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 64px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid var(--card-border);
+    width: 100%;
+    max-width: 720px;
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+
+  header {
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+
+  .eyebrow {
+    color: var(--warn);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 1.875rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 6px 0 0;
+  }
+
+  .header-sub {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin: 4px 0 0;
+  }
+
+  section.admin-section {
+    border-top: 1px solid var(--card-border);
+    padding-top: 22px;
+    margin-top: 22px;
+  }
+  section.admin-section:first-of-type {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .admin-desc {
+    color: var(--text-soft);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+
+  /* Status grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .stat-label {
+    color: var(--muted);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 4px;
+  }
+  .stat-value {
+    color: var(--text);
+    font-size: 1.625rem;
+    font-weight: 800;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value.accent  { color: var(--accent); }
+  .stat-value.warn    { color: var(--warn); }
+
+  /* Buttons */
+  .btn {
+    appearance: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    padding: 12px 18px;
+    cursor: pointer;
+    transition: transform 100ms ease, background 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.99); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-primary  { background: var(--accent); color: #0a1428; }
+  .btn-primary:hover { background: #4ab337; }
+
+  .btn-warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid var(--warn);
+  }
+  .btn-warn:hover { background: rgba(245, 180, 0, 0.22); }
+
+  .btn-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  .btn-danger:hover { background: rgba(255, 94, 94, 0.22); }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.9375rem;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(98, 216, 78, 0.05);
+  }
+
+  details {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    transition: background 160ms ease;
+  }
+  details[open] { background: rgba(255, 255, 255, 0.045); }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--text);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: '▸';
+    color: var(--accent);
+    font-size: 0.75rem;
+    transition: transform 200ms ease;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+
+  details > *:not(summary) { margin-top: 10px; }
+  details p, details ol, details ul {
+    color: var(--text-soft);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    margin: 8px 0;
+  }
+  details ol, details ul { padding-left: 20px; }
+  details li { margin-bottom: 4px; }
+
+  code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    background: rgba(98, 216, 78, 0.12);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  /* Output / log */
+  .log {
+    margin-top: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-soft);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .log-line { margin: 0 0 4px; }
+  .log-line.ok    { color: var(--accent); }
+  .log-line.err   { color: var(--danger); }
+  .log-line.warn  { color: var(--warn); }
+  .log-empty { color: var(--muted); font-style: italic; }
+
+  .claimed-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .claimed-pill {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 120ms ease;
+  }
+  .claimed-pill:hover { border-color: var(--accent); }
+
+  .row-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  @media (min-width: 480px) {
+    .card { padding: 36px 32px; }
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <header>
+      <p class="eyebrow">Admin · ATF Lab</p>
+      <h1>Workshop console</h1>
+      <p class="header-sub">Reset the pool, free a stuck instance, or grab troubleshooting steps.</p>
+    </header>
+
+    <section class="admin-section">
+      <h2>Troubleshooting</h2>
+
+      <details>
+        <summary>Tests aren't running on an instance</summary>
+        <p>Check the table <code>sn_atf_tg_sn_boq</code> on the instance — it shows tests currently running or queued.</p>
+        <p>If nothing's there, the test never started; if it's stuck, the test agent may be hung.</p>
+      </details>
+
+      <details>
+        <summary>Repair the ATF plugin on an instance</summary>
+        <ol>
+          <li>Hop to the attendee's instance (your admin session works across all workshop instances).</li>
+          <li>From the navigator, type <code>v_plugin.list</code> and press Enter.</li>
+          <li>Search for ID = <code>com.glide.automated_testing_impl.sn_atf_tg.hosted</code>.</li>
+          <li>Open the form.</li>
+          <li>At the bottom of the form, click <strong>Activate / Repair</strong>.</li>
+        </ol>
+      </details>
+
+      <details>
+        <summary>Help an attendee re-claim</summary>
+        <p>Find their instance number → use <strong>Free a specific instance</strong> below to clear it → tell them to refresh the workshop URL and tap <strong>Claim my instance</strong> again.</p>
+        <p>The freed slot goes to the back of the queue, so they may get a different number this time.</p>
+      </details>
+    </section>
+
+    <section class="admin-section">
+      <h2>Status</h2>
+      <p class="admin-desc">Live counts from the Google Sheet.</p>
+      <div class="stat-grid">
+        <div class="stat">
+          <p class="stat-label">Total</p>
+          <p class="stat-value" id="statTotal">—</p>
+        </div>
+        <div class="stat">
+          <p class="stat-label">Claimed</p>
+          <p class="stat-value warn" id="statClaimed">—</p>
+        </div>
+        <div class="stat">
+          <p class="stat-label">Available</p>
+          <p class="stat-value accent" id="statAvailable">—</p>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="refreshBtn" type="button">Refresh</button>
+      </div>
+      <div id="claimedListWrap" class="hidden">
+        <p class="admin-desc" style="margin-top: 14px; margin-bottom: 8px;">Tap a number to free it.</p>
+        <div class="claimed-list" id="claimedList"></div>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <h2>Free a specific instance</h2>
+      <p class="admin-desc">Frees a single row so it can be re-claimed. Use when an attendee's instance has issues and you want them back in the pool.</p>
+      <div class="input-row">
+        <input id="clearInput" type="text" inputmode="numeric" placeholder="e.g. 42" autocomplete="off" />
+        <button class="btn btn-warn" id="clearBtn" type="button">Free instance</button>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <h2>Reset all claims</h2>
+      <p class="admin-desc">Wipes the Claimed and Claimed At columns on every row. Use before each workshop or to start fresh after testing. <strong>Cannot be undone.</strong></p>
+      <button class="btn btn-danger" id="resetBtn" type="button">Reset all claims</button>
+    </section>
+
+    <section class="admin-section">
+      <h2>Activity log</h2>
+      <div class="log" id="log">
+        <p class="log-line log-empty">No actions yet — try Refresh.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* =========================================================
+       CONFIG — paste matching values from the main app + Script Properties
+       ========================================================= */
+    const CONFIG = {
+      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzCYbrpUckqzRGMM0Q0lJfpu76EUzxpNOdLko-_S3Fi2jZwsp0GFW7Q4-IPBLmImD1b/exec'
+    };
+
+    const els = {
+      statTotal:       document.getElementById('statTotal'),
+      statClaimed:     document.getElementById('statClaimed'),
+      statAvailable:   document.getElementById('statAvailable'),
+      refreshBtn:      document.getElementById('refreshBtn'),
+      clearInput:      document.getElementById('clearInput'),
+      clearBtn:        document.getElementById('clearBtn'),
+      resetBtn:        document.getElementById('resetBtn'),
+      claimedList:     document.getElementById('claimedList'),
+      claimedListWrap: document.getElementById('claimedListWrap'),
+      log:             document.getElementById('log')
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      els.refreshBtn.addEventListener('click', refresh);
+      els.clearBtn.addEventListener('click', clearOne);
+      els.resetBtn.addEventListener('click', resetAll);
+      els.clearInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') clearOne();
+      });
+      refresh(); // initial load
+    });
+
+    /* =========================================================
+       Actions
+       ========================================================= */
+    async function refresh() {
+      logLine('Fetching status…');
+      try {
+        const data = await call({ action: 'status' });
+        if (!data || !data.success) {
+          logLine('Status failed: ' + ((data && data.error) || 'unknown'), 'err');
+          return;
+        }
+        els.statTotal.textContent     = data.total;
+        els.statClaimed.textContent   = data.claimed;
+        els.statAvailable.textContent = data.available;
+        renderClaimedList(data.claimedList || []);
+        logLine(`Status: ${data.claimed}/${data.total} claimed (${data.available} free)`, 'ok');
+      } catch (err) {
+        logLine('Status request failed: ' + err.message, 'err');
+      }
+    }
+
+    async function clearOne() {
+      const raw = els.clearInput.value.trim();
+      if (!raw) {
+        logLine('Enter an instance number first', 'warn');
+        els.clearInput.focus();
+        return;
+      }
+      if (!confirm(`Free instance ${raw}? It will be available for re-claim.`)) return;
+      els.clearBtn.disabled = true;
+      logLine(`Freeing instance ${raw}…`);
+      try {
+        const data = await call({
+          action: 'clear',
+          instance: raw
+        });
+        if (data && data.success) {
+          logLine(`Instance ${data.instance} freed (row ${data.row})`, 'ok');
+          els.clearInput.value = '';
+          await refresh();
+        } else {
+          logLine('Clear failed: ' + ((data && data.error) || 'unknown'), 'err');
+        }
+      } catch (err) {
+        logLine('Clear request failed: ' + err.message, 'err');
+      } finally {
+        els.clearBtn.disabled = false;
+      }
+    }
+
+    async function resetAll() {
+      const ok = confirm(
+        'Reset ALL claims?\n\n' +
+        'This wipes Column D and E for every row in the sheet. ' +
+        'Anyone who already has an instance loses their claim.\n\n' +
+        'This cannot be undone.'
+      );
+      if (!ok) return;
+      const confirm2 = prompt('Type RESET to confirm:');
+      if (confirm2 !== 'RESET') {
+        logLine('Reset cancelled', 'warn');
+        return;
+      }
+      els.resetBtn.disabled = true;
+      logLine('Resetting all claims…');
+      try {
+        const data = await call({
+          action: 'reset'
+        });
+        if (data && data.success) {
+          logLine(`All claims reset (${data.cleared} rows cleared)`, 'ok');
+          await refresh();
+        } else {
+          logLine('Reset failed: ' + ((data && data.error) || 'unknown'), 'err');
+        }
+      } catch (err) {
+        logLine('Reset request failed: ' + err.message, 'err');
+      } finally {
+        els.resetBtn.disabled = false;
+      }
+    }
+
+    /* =========================================================
+       Helpers
+       ========================================================= */
+    async function call(params) {
+      const qs = new URLSearchParams(params).toString();
+      const url = CONFIG.APPS_SCRIPT_URL + (CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?') + qs;
+      const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    }
+
+    function renderClaimedList(list) {
+      if (!list.length) {
+        els.claimedListWrap.classList.add('hidden');
+        return;
+      }
+      els.claimedListWrap.classList.remove('hidden');
+      els.claimedList.innerHTML = '';
+      // Strip leading zeros for display
+      const formatted = list.map(item => ({
+        ...item,
+        display: String(parseInt(item.instance, 10) || 0)
+      }));
+      // Sort by numeric instance value
+      formatted.sort((a, b) => parseInt(a.instance, 10) - parseInt(b.instance, 10));
+      for (const item of formatted) {
+        const pill = document.createElement('span');
+        pill.className = 'claimed-pill';
+        pill.textContent = item.display;
+        pill.title = `Claimed ${item.claimedAt || '(no timestamp)'}`;
+        pill.addEventListener('click', () => {
+          els.clearInput.value = item.display;
+          els.clearInput.focus();
+        });
+        els.claimedList.appendChild(pill);
+      }
+    }
+
+    function logLine(text, kind) {
+      const empty = els.log.querySelector('.log-empty');
+      if (empty) empty.remove();
+      const p = document.createElement('p');
+      p.className = 'log-line' + (kind ? ' ' + kind : '');
+      const ts = new Date().toLocaleTimeString();
+      p.textContent = `[${ts}] ${text}`;
+      els.log.insertBefore(p, els.log.firstChild);
+      // Cap at 50 entries
+      while (els.log.childElementCount > 50) {
+        els.log.removeChild(els.log.lastChild);
+      }
+    }
+  </script>
+</body>
+</html>
