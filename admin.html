@@ -286,23 +286,35 @@
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 12px;
-    max-height: 180px;
+    max-height: 240px;
     overflow-y: auto;
     padding: 4px;
   }
   .claimed-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: var(--accent-soft);
     color: var(--accent);
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 999px;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.8125rem;
+    font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
     transition: border-color 120ms ease;
   }
   .claimed-pill:hover { border-color: var(--accent); }
+  .claimed-pill .pill-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .claimed-pill .pill-name {
+    color: var(--text-soft);
+    font-weight: 500;
+  }
+  .claimed-pill .pill-name.unknown { color: var(--muted); font-style: italic; }
 
   .row-actions {
     display: flex;
@@ -553,8 +565,24 @@
       for (const item of formatted) {
         const pill = document.createElement('span');
         pill.className = 'claimed-pill';
-        pill.textContent = item.display;
-        pill.title = `Claimed ${item.claimedAt || '(no timestamp)'}`;
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'pill-num';
+        numSpan.textContent = item.display;
+        pill.appendChild(numSpan);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'pill-name';
+        const name = (item.claimedBy || '').trim();
+        if (name) {
+          nameSpan.textContent = name;
+        } else {
+          nameSpan.textContent = '(no name)';
+          nameSpan.classList.add('unknown');
+        }
+        pill.appendChild(nameSpan);
+
+        pill.title = (name ? name + ' · ' : '') + 'Claimed ' + (item.claimedAt || '(no timestamp)');
         pill.addEventListener('click', () => {
           els.clearInput.value = item.display;
           els.clearInput.focus();

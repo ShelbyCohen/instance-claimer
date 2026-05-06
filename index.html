@@ -476,6 +476,46 @@
     font-weight: 900;
   }
 
+  /* Name input on the claim screen */
+  .name-input {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid var(--card-border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    width: 100%;
+    text-align: center;
+    margin-top: 4px;
+    transition: border-color 160ms ease, background 160ms ease;
+    -webkit-appearance: none;
+  }
+  .name-input::placeholder {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .name-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(98, 216, 78, 0.06);
+  }
+  .name-input.invalid {
+    border-color: var(--error);
+    background: rgba(255, 94, 94, 0.06);
+  }
+
+  /* Friendly greeting shown after a successful claim, when name is set */
+  .welcome-line {
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 4px 0 0;
+  }
+
   /* Hint shown after the user taps Open instance — explains the auto-copy */
   .copy-hint {
     color: var(--accent);
@@ -749,6 +789,7 @@
       </div>
       <h1 class="title" id="title">ATF Lab</h1>
       <p class="subtitle" id="subtitle">Your ServiceNow instance for today's hands-on lab.</p>
+      <input id="nameInput" class="name-input" type="text" placeholder="Your full name" autocomplete="name" autocapitalize="words" maxlength="100" />
       <button id="claimBtn" class="btn-primary" type="button">Claim my instance</button>
     </section>
 
@@ -783,6 +824,7 @@
         </div>
       </div>
       <p class="claimed-tag">You're in</p>
+      <p id="welcomeLine" class="welcome-line hidden"></p>
 
       <a id="instanceBtn" class="btn-primary" target="_blank" rel="noopener noreferrer">
         <span>Open instance <span id="instanceNumber" class="instance-num">0</span></span>
@@ -908,6 +950,8 @@
       eyebrow:        document.getElementById('eyebrow'),
       subtitle:       document.getElementById('subtitle'),
       copyHint:       document.getElementById('copyHint'),
+      nameInput:      document.getElementById('nameInput'),
+      welcomeLine:    document.getElementById('welcomeLine'),
       claim:          document.getElementById('state-claim'),
       loading:        document.getElementById('state-loading'),
       result:         document.getElementById('state-result'),
@@ -1010,8 +1054,22 @@
         history.replaceState(null, '', window.location.pathname);
       }
 
+      // Pre-fill the name input from a previous claim, so a tab close + retype
+      // isn't needed. Stored separately from the claim cache so it survives
+      // even after they release / clear.
+      try {
+        const savedName = localStorage.getItem('atf-lab-name');
+        if (savedName) els.nameInput.value = savedName;
+      } catch (_) {}
+
       els.claimBtn.addEventListener('click', startClaim);
       els.retryBtn.addEventListener('click', startClaim);
+      els.nameInput.addEventListener('input', () => {
+        els.nameInput.classList.remove('invalid');
+      });
+      els.nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') startClaim();
+      });
       els.copyUser.addEventListener('click', () => copyText(CONFIG.USERNAME, els.copyUser));
       els.copyPwd.addEventListener('click', () => {
         if (claimResult) copyText(claimResult.password, els.copyPwd);
@@ -1214,6 +1272,16 @@
         return;
       }
 
+      // Require a name (any non-empty trimmed input ≥ 2 chars).
+      const enteredName = (els.nameInput.value || '').trim();
+      if (enteredName.length < 2) {
+        els.nameInput.classList.add('invalid');
+        els.nameInput.focus();
+        return;
+      }
+      // Persist the name across sessions so users don't re-type it after a release.
+      try { localStorage.setItem('atf-lab-name', enteredName); } catch (_) {}
+
       els.claimBtn.disabled = true;
       els.copyHint.classList.add('hidden'); // reset for any retry path
       showState('loading');
@@ -1274,10 +1342,13 @@
     }
 
     async function fetchClaim() {
+      const name = (els.nameInput.value || '').trim();
+      const sep  = CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?';
+      const url  = CONFIG.APPS_SCRIPT_URL + sep + 'name=' + encodeURIComponent(name);
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
       try {
-        const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+        const res = await fetch(url, {
           method:   'GET',
           redirect: 'follow',
           signal:   ctrl.signal,
@@ -1300,6 +1371,16 @@
       els.instanceBtn.setAttribute('href', data.instanceUrl || '#');
       els.username.textContent = data.username || CONFIG.USERNAME;
       els.password.textContent = data.password || '—';
+
+      const name = (data.claimedBy || '').trim();
+      if (name) {
+        // Take just the first name to keep the greeting punchy
+        const firstName = name.split(/\s+/)[0];
+        els.welcomeLine.textContent = `Hi, ${firstName}`;
+        els.welcomeLine.classList.remove('hidden');
+      } else {
+        els.welcomeLine.classList.add('hidden');
+      }
     }
 
     // "001" → "1", "042" → "42", "000" → "0", "BASE" → "BASE"
