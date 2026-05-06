@@ -1252,15 +1252,24 @@
           els.loadingMsg.textContent = 'Server busy, retrying… (' + attempt + '/' + MAX_BUSY_RETRIES + ')';
           await sleep(BUSY_RETRY_DELAY);
         }
-        const data = await fetchClaim();
-        if (data && data.success) return data;
-        if (data && data.error && /busy/i.test(data.error)) {
-          lastBusy = data;
+        try {
+          const data = await fetchClaim();
+          if (data && data.success) return data;
+          if (data && data.error && /busy/i.test(data.error)) {
+            lastBusy = data;
+            continue;
+          }
+          // Non-busy error response (e.g. "All instances claimed") — return as-is.
+          return data;
+        } catch (err) {
+          // AbortError, HTTP 5xx, JSON parse fail, network blip — treat as transient
+          // and retry. After MAX_BUSY_RETRIES we throw BUSY_EXHAUSTED below, which
+          // surfaces a clear "lots of people claiming" message instead of the
+          // misleading "check your wifi" catch-all.
+          lastBusy = { error: err.message || String(err) };
           continue;
         }
-        return data;
       }
-      if (lastBusy) throw new Error('BUSY_EXHAUSTED');
       throw new Error('BUSY_EXHAUSTED');
     }
 
